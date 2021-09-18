@@ -4,7 +4,8 @@
 
 int pwm;
 int sign;
-uint8_t dendbyte[5];
+uint8_t sendbyte[5];
+uint8_t recvbyte[5];
 uint8_t crc8ccit_table[256];
 
 ds3218mg myServo;
@@ -37,9 +38,27 @@ uint8_t calc_crc8ccit(uint8_t *data,uint8_t len){
 }
 
 void serialcom() {
-  dendbyte[4] = calc_crc8ccit(dendbyte,4);
+ uint8_t l_recv[5];
+ uint16_t buff;
+ int avebyte = Serial.available();
+ if(avebyte>4){
+  for(int ii=0;ii<5;ii++){
+    l_recv[ii]=Serial.read();
+  }
+  if(l_recv[4] == calc_crc8ccit(sendbyte,4)){
+    for(int ii=0;ii<5;ii++){
+      recvbyte[ii] = l_recv[ii];
+    }
+  }
+  for(int ii=avebyte;ii>5;ii--){
+    buff = Serial.read();
+  }
+  
+ }
+  sendbyte[3] += 0x01;
+  sendbyte[4] = calc_crc8ccit(sendbyte,4);
   for(int ii=0; ii<5;ii++){
-    Serial.write(dendbyte[ii]);
+    Serial.write(sendbyte[ii]);
   }
 }
 
@@ -50,17 +69,19 @@ void setup() {
   myServo.attach(13);
   gen_crc8ccit_table();
   Serial.begin(115200);
-  dendbyte[0] = 0x0A;
-  dendbyte[1] = 0x01;
-  dendbyte[2] = 0x02;
-  dendbyte[3] = 0x00;
-  Timer3.initialize(10000);
+  sendbyte[0] = 0x0A;
+  sendbyte[1] = 0x01;
+  sendbyte[2] = 0x02;
+  sendbyte[3] = 0x00;
+  for(int ii=0;ii<5;ii++){
+      recvbyte[ii] = 0x00;
+  }
+  Timer3.initialize(10*1000);
   Timer3.attachInterrupt(serialcom);
 }
 void loop() {
   pwm = 0;
   myServo.write(pwm);
-  dendbyte[3] += 0x01;
   long c=0;
   while(c<10000){
     pwm = 90;
