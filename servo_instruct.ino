@@ -1,9 +1,9 @@
 #include <Servo.h>
 #include <TimerThree.h>
 #include "ds3218mg.hpp"
-#define SENDBYTE (5)
-#define RECVBYTE (7)
-#define MOTORNUM (2)
+#define SENDBYTE (3)
+#define RECVBYTE (16)
+#define MOTORNUM (7)
 
 int t_angle[MOTORNUM];
 int sign;
@@ -48,15 +48,13 @@ void serialcom() {
  }
  for(int jj=0;jj<(avebyte-(RECVBYTE-1));jj++){
    if(l_recv[avebyte-1-jj] == calc_crc8ccit(l_recv+avebyte-RECVBYTE-jj,RECVBYTE-1)){
-     sendbyte[3] += 0x01;
+     sendbyte[1] += 0x01;
      for(int ii=0;ii<RECVBYTE;ii++){
        recvbyte[ii] = l_recv[avebyte-RECVBYTE-jj+ii];
      }
      break;
     }
    }
-  sendbyte[1] = recvbyte[1];
-  sendbyte[2] = recvbyte[2];
   sendbyte[SENDBYTE-1] = calc_crc8ccit(sendbyte,SENDBYTE-1);
   for(int ii=0; ii<SENDBYTE;ii++){
     Serial.write(sendbyte[ii]);
@@ -76,13 +74,16 @@ void setup() {
   Serial.begin(115200);
   sendbyte[0] = 0x0A;
   sendbyte[1] = 0x01;
-  sendbyte[2] = 0x02;
-  sendbyte[3] = 0x00;
   for(int ii=0;ii<5;ii++){
       recvbyte[ii] = 0x00;
   }
   pinMode(12,OUTPUT);
   pinMode(11,OUTPUT);
+  pinMode(10,OUTPUT);
+  pinMode(9,OUTPUT);
+  pinMode(8,OUTPUT);
+  pinMode(7,OUTPUT);
+  pinMode(6,OUTPUT);
   for(int ii=0;ii<MOTORNUM;ii++){
     myServo[ii].attach(12-ii);
   }
