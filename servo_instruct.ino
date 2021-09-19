@@ -2,7 +2,7 @@
 #include <TimerThree.h>
 #include "ds3218mg.hpp"
 
-int pwm;
+int t_angle,pre_angle;
 int sign;
 uint8_t sendbyte[5];
 uint8_t recvbyte[5];
@@ -38,36 +38,39 @@ uint8_t calc_crc8ccit(uint8_t *data,uint8_t len){
 }
 
 void serialcom() {
- uint8_t l_recv[5];
- uint16_t buff;
+ uint8_t *l_recv;
  int avebyte = Serial.available();
- if(avebyte>4){
-  for(int ii=0;ii<5;ii++){
-    l_recv[ii]=Serial.read();
-  }
-  if(l_recv[4] == calc_crc8ccit(sendbyte,4)){
-    for(int ii=0;ii<5;ii++){
-      recvbyte[ii] = l_recv[ii];
-    }
-  }
-  for(int ii=avebyte;ii>5;ii--){
-    buff = Serial.read();
-  }
-  
+ l_recv = new uint8_t[avebyte];
+ for(int ii=0;ii<avebyte;ii++){
+   l_recv[ii]=Serial.read();
  }
-  sendbyte[3] += 0x01;
+ for(int jj=0;jj<(avebyte-4);jj++){
+   if(l_recv[avebyte-1-jj] == calc_crc8ccit(l_recv+avebyte-5-jj,4)){
+     sendbyte[3] += 0x01;
+     for(int ii=0;ii<5;ii++){
+       recvbyte[ii] = l_recv[avebyte-5-jj+ii];
+     }
+     break;
+    }
+   }
+  sendbyte[1] = recvbyte[1];
+  sendbyte[2] = recvbyte[2];
   sendbyte[4] = calc_crc8ccit(sendbyte,4);
   for(int ii=0; ii<5;ii++){
     Serial.write(sendbyte[ii]);
   }
+  t_angle = (int)((int16_t)((recvbyte[1] << 8) + recvbyte[2]));
+
+  delete[] l_recv;
 }
 
 void setup() {
-  pwm = 0;
+  t_angle = 0;
   sign=0;
   pinMode(13,OUTPUT);
   myServo.attach(13);
   gen_crc8ccit_table();
+  Serial.setTimeout(5);
   Serial.begin(115200);
   sendbyte[0] = 0x0A;
   sendbyte[1] = 0x01;
@@ -76,24 +79,9 @@ void setup() {
   for(int ii=0;ii<5;ii++){
       recvbyte[ii] = 0x00;
   }
-  Timer3.initialize(10*1000);
+  Timer3.initialize(5*1000);
   Timer3.attachInterrupt(serialcom);
 }
 void loop() {
-  pwm = 0;
-  myServo.write(pwm);
-  long c=0;
-  while(c<10000){
-    pwm = 90;
-    myServo.write(pwm);
-    c++;
-  }
-  c=0;
-  while(c<10000){
-    pwm = -90;
-    myServo.write(pwm);
-    c++;
-  }
-  pwm = 0;
-  myServo.write(pwm);
+  myServo.write(t_angle);
 }
