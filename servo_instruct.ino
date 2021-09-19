@@ -1,14 +1,16 @@
 #include <Servo.h>
 #include <TimerThree.h>
 #include "ds3218mg.hpp"
+#define SENDBYTE (5)
+#define RECVBYTE (7)
+#define MOTORNUM (2)
 
-int t_angle,pre_angle;
+int t_angle[MOTORNUM];
 int sign;
-uint8_t sendbyte[5];
-uint8_t recvbyte[5];
+uint8_t sendbyte[SENDBYTE];
+uint8_t recvbyte[RECVBYTE];
 uint8_t crc8ccit_table[256];
-
-ds3218mg myServo;
+ds3218mg myServo[MOTORNUM];
 
 void gen_crc8ccit_table(){
     uint8_t crc8ccit_poly = 0x8D;
@@ -44,31 +46,31 @@ void serialcom() {
  for(int ii=0;ii<avebyte;ii++){
    l_recv[ii]=Serial.read();
  }
- for(int jj=0;jj<(avebyte-4);jj++){
-   if(l_recv[avebyte-1-jj] == calc_crc8ccit(l_recv+avebyte-5-jj,4)){
+ for(int jj=0;jj<(avebyte-(RECVBYTE-1));jj++){
+   if(l_recv[avebyte-1-jj] == calc_crc8ccit(l_recv+avebyte-RECVBYTE-jj,RECVBYTE-1)){
      sendbyte[3] += 0x01;
-     for(int ii=0;ii<5;ii++){
-       recvbyte[ii] = l_recv[avebyte-5-jj+ii];
+     for(int ii=0;ii<RECVBYTE;ii++){
+       recvbyte[ii] = l_recv[avebyte-RECVBYTE-jj+ii];
      }
      break;
     }
    }
   sendbyte[1] = recvbyte[1];
   sendbyte[2] = recvbyte[2];
-  sendbyte[4] = calc_crc8ccit(sendbyte,4);
-  for(int ii=0; ii<5;ii++){
+  sendbyte[SENDBYTE-1] = calc_crc8ccit(sendbyte,SENDBYTE-1);
+  for(int ii=0; ii<SENDBYTE;ii++){
     Serial.write(sendbyte[ii]);
   }
-  t_angle = (int)((int16_t)((recvbyte[1] << 8) + recvbyte[2]));
-
+  for(int ii=0;ii<MOTORNUM;ii++){
+    t_angle[ii] = (int)((int16_t)((recvbyte[2*ii+1] << 8) + recvbyte[2*ii+2]));
+  }
   delete[] l_recv;
 }
 
 void setup() {
-  t_angle = 0;
+  t_angle[0] = 0;
+  t_angle[1] = 0;
   sign=0;
-  pinMode(13,OUTPUT);
-  myServo.attach(13);
   gen_crc8ccit_table();
   Serial.setTimeout(5);
   Serial.begin(115200);
@@ -79,9 +81,16 @@ void setup() {
   for(int ii=0;ii<5;ii++){
       recvbyte[ii] = 0x00;
   }
+  pinMode(12,OUTPUT);
+  pinMode(11,OUTPUT);
+  for(int ii=0;ii<MOTORNUM;ii++){
+    myServo[ii].attach(12-ii);
+  }
   Timer3.initialize(5*1000);
   Timer3.attachInterrupt(serialcom);
 }
 void loop() {
-  myServo.write(t_angle);
+  for(int ii=0;ii<MOTORNUM;ii++){
+    myServo[ii].write(t_angle[ii]);
+  }
 }
