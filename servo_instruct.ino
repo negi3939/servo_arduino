@@ -48,11 +48,13 @@ void serialcom() {
  }
  for(int jj=0;jj<(avebyte-(RECVBYTE-1));jj++){
    if(l_recv[avebyte-1-jj] == calc_crc8ccit(l_recv+avebyte-RECVBYTE-jj,RECVBYTE-1)){
-     sendbyte[1] += 0x01;
+     sendbyte[1] = 0x01;
      for(int ii=0;ii<RECVBYTE;ii++){
        recvbyte[ii] = l_recv[avebyte-RECVBYTE-jj+ii];
      }
      break;
+    }else if(jj==(avebyte-(RECVBYTE))){
+      sendbyte[1] = 0x00;
     }
    }
   sendbyte[SENDBYTE-1] = calc_crc8ccit(sendbyte,SENDBYTE-1);
