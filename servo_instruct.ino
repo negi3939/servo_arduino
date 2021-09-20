@@ -13,7 +13,7 @@ uint8_t crc8ccit_table[256];
 ds3218mg myServo[MOTORNUM];
 
 void gen_crc8ccit_table(){
-    uint8_t crc8ccit_poly = 0x8D;
+    uint8_t crc8ccit_poly = 0x6F;
     uint8_t val;
     
     for(uint16_t cnt = 0;cnt < 256;cnt++){
